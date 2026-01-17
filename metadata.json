@@ -1,0 +1,7 @@
+{
+  "name": "BIANSoar 赋佐: Global Low-Altitude Economy Portal",
+  "description": "A comprehensive platform for the global low-altitude economy, featuring international exhibitions, industry insights, and an AI-powered consultancy for drone and eVTOL sectors.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
