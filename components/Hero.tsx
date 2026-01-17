@@ -24,7 +24,6 @@ const Hero: React.FC<Props> = ({ onNavigate }) => {
         {/* Main Heading */}
         <h1 className="text-5xl lg:text-6xl font-black text-slate-900 tracking-tight mb-8 leading-[1.15]">
           探索全球 <span className="relative inline-block px-2">
-            <span className="absolute inset-x-0 bottom-2 top-2 bg-[#3b82f6]/60 -z-10"></span>
             低空经济
           </span> <br /> 展会与创新动态
         </h1>
