@@ -15,14 +15,32 @@ import VenueDetailPage from './components/VenueDetailPage';
 import ProductShowcasePage from './components/ProductShowcasePage';
 import ProductDetailPage from './components/ProductDetailPage';
 import PartnershipPage from './components/PartnershipPage';
+import AdminDashboardPage from './components/AdminDashboardPage';
+import AdminLoginPage from './components/AdminLoginPage';
 import ExhibitionCarousel from './components/ExhibitionCarousel';
 import { EXHIBITIONS as MOCK_EXHIBITIONS, EXHIBITION_CENTERS as MOCK_EXHIBITION_CENTERS, PRODUCTS as MOCK_PRODUCTS, BLOG_POSTS as MOCK_BLOG_POSTS } from './data/mockData';
 import type { ExhibitionCenter, Product } from './data/mockData';
 import type { Exhibition, NewsItem } from './types';
 import { ChevronRight, Package, Zap, ArrowUpRight } from 'lucide-react';
-import { fetchBlogPosts, fetchExhibitionCenters, fetchExhibitions, fetchProducts } from './services/api';
+import { fetchBlogPosts, fetchExhibitionCenters, fetchExhibitions, fetchProducts, type AdminUser, adminLogout, fetchAdminMe } from './services/api';
 
-type View = 'landing' | 'calendar' | 'insights' | 'insight_detail' | 'about' | 'exhibition_detail' | 'booth_application' | 'ticket_booking' | 'domestic' | 'international' | 'center' | 'venue_detail' | 'products' | 'product_detail' | 'partnership';
+type View =
+  | 'landing'
+  | 'calendar'
+  | 'insights'
+  | 'insight_detail'
+  | 'about'
+  | 'exhibition_detail'
+  | 'booth_application'
+  | 'ticket_booking'
+  | 'domestic'
+  | 'international'
+  | 'center'
+  | 'venue_detail'
+  | 'products'
+  | 'product_detail'
+  | 'partnership'
+  | 'admin';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -31,6 +49,7 @@ const App: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<NewsItem | null>(null);
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>(MOCK_EXHIBITIONS);
   const [exhibitionCenters, setExhibitionCenters] = useState<ExhibitionCenter[]>(MOCK_EXHIBITION_CENTERS);
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
@@ -70,6 +89,24 @@ const App: React.FC = () => {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const me = await fetchAdminMe();
+      if (me) {
+        setAdminUser(me);
+      } else {
+        setAdminUser(null);
+      }
+    };
+    checkAdmin();
+  }, []);
+
+  const handleAdminLogout = async () => {
+    await adminLogout();
+    setAdminUser(null);
+    setCurrentView('landing');
+  };
 
   const handleViewExDetails = (id: string) => {
     setSelectedExId(id);
@@ -209,6 +246,23 @@ const App: React.FC = () => {
         );
       case 'partnership':
         return <PartnershipPage onBack={() => setCurrentView('landing')} />;
+      case 'admin':
+        if (!adminUser) {
+          return (
+            <AdminLoginPage
+              onLoginSuccess={(user) => {
+                setAdminUser(user);
+                setCurrentView('admin');
+              }}
+            />
+          );
+        }
+        return (
+          <AdminDashboardPage
+            currentUser={adminUser}
+            onLogout={handleAdminLogout}
+          />
+        );
       case 'about':
         return <AboutPage />;
       case 'landing':

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Send, CheckCircle2, User, Mail, Ticket, CreditCard, ShieldCheck, MapPin } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle2, User, Phone, Ticket, CreditCard, ShieldCheck, MapPin } from 'lucide-react';
 import { Exhibition } from '../types';
 import { submitTicketBooking } from '../services/api';
 
@@ -11,7 +11,6 @@ interface Props {
 
 const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
   const [submitted, setSubmitted] = useState(false);
-  const [ticketType, setTicketType] = useState('Standard');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -22,9 +21,9 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
 
     const formData = new FormData(e.currentTarget);
     const name = (formData.get('name') || '').toString().trim();
-    const email = (formData.get('email') || '').toString().trim();
+    const phone = (formData.get('phone') || '').toString().trim();
 
-    if (!name || !email) {
+    if (!name || !phone) {
       alert('请完整填写必填信息');
       return;
     }
@@ -32,9 +31,8 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
     setIsSubmitting(true);
     const ok = await submitTicketBooking({
       exhibitionId: exhibition.id,
-      ticketType,
       name,
-      email
+      phone
     });
     setIsSubmitting(false);
 
@@ -54,7 +52,7 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
           </div>
           <h1 className="text-3xl font-black text-slate-900 mb-4">预订成功！</h1>
           <p className="text-slate-500 mb-10 leading-relaxed font-medium">
-            您的电子票确认函已发送至邮箱。请在展会期间出示二维码入场。
+            您的预订信息已成功登记，我们会通过短信或电话与您确认。
           </p>
           <button 
             onClick={onBack}
@@ -94,24 +92,13 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
                 <form onSubmit={handleSubmit} className="space-y-8">
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <button 
-                        type="button"
-                        onClick={() => setTicketType('Standard')}
-                        className={`p-6 rounded-2xl border-2 text-left transition-all ${ticketType === 'Standard' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}
-                      >
+                      <div className="p-6 rounded-2xl border-2 text-left transition-all border-blue-600 bg-blue-50/50">
                         <div className="font-black text-slate-900 mb-1">专业观众票</div>
                         <div className="text-xs text-slate-500 mb-4 font-medium">包含展区参观及开幕式</div>
-                        <div className="text-xl font-black text-blue-600">¥ 0 <span className="text-[10px] text-slate-400 font-bold ml-1">(早鸟免费)</span></div>
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setTicketType('VIP')}
-                        className={`p-6 rounded-2xl border-2 text-left transition-all ${ticketType === 'VIP' ? 'border-amber-500 bg-amber-50/50' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}
-                      >
-                        <div className="font-black text-slate-900 mb-1">VIP 贵宾票</div>
-                        <div className="text-xs text-slate-500 mb-4 font-medium">包含全场论坛、午餐及休息室</div>
-                        <div className="text-xl font-black text-amber-600">¥ 2,800</div>
-                      </button>
+                        <div className="text-xl font-black text-blue-600">
+                          ¥ 0 <span className="text-[10px] text-slate-400 font-bold ml-1">(早鸟免费)</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -130,14 +117,14 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">联系邮箱</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">联系电话</label>
                     <div className="relative">
-                      <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input 
                         required
-                        type="email" 
-                        name="email"
-                        placeholder="Email for confirmation"
+                        type="tel" 
+                        name="phone"
+                        placeholder="手机号或联系电话"
                         className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
                       />
                     </div>
@@ -149,7 +136,7 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
                       disabled={isSubmitting}
                       className="w-full py-5 bg-blue-600 text-white font-black text-lg rounded-2xl hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center space-x-3 group disabled:opacity-50"
                     >
-                      <span>{ticketType === 'Standard' ? '立即免费登记' : '前往支付预订'}</span>
+                      <span>立即免费登记</span>
                       <CreditCard className="w-5 h-5" />
                     </button>
                   </div>
@@ -168,7 +155,7 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">门票类型</span>
-                  <span className="font-bold text-blue-400">{ticketType === 'Standard' ? '专业观众票' : 'VIP 贵宾票'}</span>
+                  <span className="font-bold text-blue-400">专业观众票</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">举办城市</span>
@@ -179,7 +166,7 @@ const TicketBookingPage: React.FC<Props> = ({ exhibition, onBack }) => {
               <div className="pt-6 border-t border-white/10">
                 <div className="flex justify-between items-end mb-8">
                   <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">应付金额</span>
-                  <div className="text-3xl font-black text-blue-500">¥ {ticketType === 'Standard' ? '0' : '2,800'}</div>
+                  <div className="text-3xl font-black text-blue-500">¥ 0</div>
                 </div>
                 
                 <div className="bg-white/5 rounded-2xl p-4 flex items-start space-x-3">

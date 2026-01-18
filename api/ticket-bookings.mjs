@@ -6,18 +6,18 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { exhibitionId, ticketType, name, email } = req.body || {};
+  const { exhibitionId, name, phone } = req.body || {};
 
-  if (!exhibitionId || !ticketType || !name || !email) {
+  if (!exhibitionId || !name || !phone) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
 
   const { error } = await supabase.from("ticket_bookings").insert({
     exhibition_id: exhibitionId,
-    ticket_type: ticketType,
+    ticket_type: "Standard",
     name,
-    email
+    phone
   });
 
   if (error) {
@@ -27,4 +27,3 @@ export default async function handler(req, res) {
 
   res.status(201).json({ success: true });
 }
-

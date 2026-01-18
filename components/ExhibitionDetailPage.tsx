@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowLeft, Calendar, MapPin, Globe, CheckCircle2, Users, Briefcase, Zap, Ticket, Share2 } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Globe, CheckCircle2, Users, Briefcase, Zap, Ticket } from 'lucide-react';
 import { Exhibition } from '../types';
 
 interface Props {
@@ -146,12 +146,6 @@ const ExhibitionDetailPage: React.FC<Props> = ({ exhibition, onBack, onApplyBoot
                   >
                     <Briefcase className="w-5 h-5" />
                     <span>展位申请</span>
-                  </button>
-                  <button 
-                    className="w-full py-5 bg-white/5 backdrop-blur text-white font-black rounded-2xl flex items-center justify-center space-x-3 hover:bg-white/10 transition-all border border-white/10 active:scale-[0.98]"
-                  >
-                    <Share2 className="w-5 h-5" />
-                    <span>无非分享</span>
                   </button>
                 </div>
               </div>
