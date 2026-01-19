@@ -89,7 +89,9 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
-  const [newRole, setNewRole] = useState<'admin' | 'ops' | 'content'>('ops');
+  const [newRole, setNewRole] = useState<'admin' | 'ops' | 'content' | 'podcast'>(
+    'ops'
+  );
   const [creatingUser, setCreatingUser] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [blogPosts, setBlogPosts] = useState<AdminBlogPost[]>([]);
@@ -115,11 +117,18 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
     if (currentUser.role === 'content') {
       return ['exhibitions', 'podcasts'];
     }
+    if (currentUser.role === 'podcast') {
+      return ['podcasts'];
+    }
     return ['tickets'];
   }, [currentUser.role]);
 
   useEffect(() => {
-    if (currentUser.role === 'admin' || currentUser.role === 'content') {
+    if (
+      currentUser.role === 'admin' ||
+      currentUser.role === 'content' ||
+      currentUser.role === 'podcast'
+    ) {
       const loadPosts = async () => {
         const posts = await fetchAdminBlogPosts();
         setBlogPosts(posts);
@@ -975,7 +984,8 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
                               const nextRole = e.target.value as
                                 | 'admin'
                                 | 'ops'
-                                | 'content';
+                                | 'content'
+                                | 'podcast';
                               if (nextRole === u.role) {
                                 return;
                               }
@@ -1115,7 +1125,8 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
                   <option value="admin">admin（全局管理）</option>
                 )}
                 <option value="ops">ops（运营）</option>
-                <option value="content">content（内容）</option>
+                    <option value="content">content（内容）</option>
+                    <option value="podcast">podcast（低空播客）</option>
               </select>
             </div>
 
@@ -1215,10 +1226,14 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
   };
 
   const renderPodcasts = () => {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'content') {
+    if (
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'content' &&
+      currentUser.role !== 'podcast'
+    ) {
       return (
         <div className="text-sm text-slate-500">
-          仅内容或管理角色可以管理播客文章。
+          仅内容、管理或播客角色可以管理播客文章。
         </div>
       );
     }
@@ -1226,7 +1241,14 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
     return (
       <div className="space-y-8">
         <div>
-          <h2 className="text-base font-bold text-slate-900 mb-4">播客文章列表</h2>
+          <h2 className="text-base font-bold text-slate-900 mb-4">
+                  播客文章列表 (Total: {blogPosts.length}, Filtered: {podcastPosts.length})
+                  {blogPosts.length > 0 && (
+                    <span className="ml-2 text-xs font-normal text-gray-500">
+                      Sample Tags: {JSON.stringify(blogPosts[0].tags)}
+                    </span>
+                  )}
+                </h2>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -1509,6 +1531,18 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
               展会管理
             </button>
           )}
+          {availableTabs.includes('podcasts') && (
+            <button
+              onClick={() => setActiveTab('podcasts')}
+              className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                activeTab === 'podcasts'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+              }`}
+            >
+              播客管理
+            </button>
+          )}
           {availableTabs.includes('users') && (
             <button
               onClick={() => setActiveTab('users')}
@@ -1528,6 +1562,7 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
           {activeTab === 'booth' && renderBoothApps()}
           {activeTab === 'partnership' && renderPartnerApps()}
           {activeTab === 'exhibitions' && renderExhibitions()}
+          {activeTab === 'podcasts' && renderPodcasts()}
           {activeTab === 'users' && renderUsers()}
         </div>
       </div>

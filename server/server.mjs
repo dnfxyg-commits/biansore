@@ -695,6 +695,7 @@ app.get("/api/admin/blog-posts", async (req, res) => {
     .order("date", { ascending: false });
 
   if (error) {
+    console.error("Error fetching admin blog posts:", error);
     res.status(500).json({ error: "Failed to load blog posts" });
     return;
   }
@@ -710,6 +711,8 @@ app.get("/api/admin/blog-posts", async (req, res) => {
     tags: row.tags || [],
     imageUrl: row.image_url
   }));
+
+  console.log(`[Admin] Fetched ${mapped.length} blog posts. First post tags:`, mapped[0]?.tags);
 
   res.json(mapped);
 });
