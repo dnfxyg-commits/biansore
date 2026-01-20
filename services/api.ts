@@ -661,3 +661,25 @@ export const updateAdminSolution = async (
 export const deleteAdminSolution = async (id: string): Promise<boolean> => {
   return deleteJson("/api/admin/solutions", { id });
 };
+
+export const uploadAdminImage = async (file: File): Promise<string | null> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/upload`, {
+      method: "POST",
+      credentials: "include",
+      body: formData
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.url;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to upload image", error);
+    return null;
+  }
+};

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import type { Exhibition } from '../types';
 import {
   fetchAdminBoothApplications,
@@ -26,6 +26,7 @@ import {
   createAdminProduct,
   updateAdminProduct,
   deleteAdminProduct,
+  uploadAdminImage,
   type AdminBoothApplication,
   type AdminPartnershipApplication,
   type AdminTicketBooking,
@@ -37,6 +38,74 @@ import {
   type AdminProductPayload,
   type AdminUser as ApiAdminUser
 } from '../services/api';
+
+const ImageUploadInput = ({
+  value,
+  onChange,
+  placeholder
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+}) => {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadAdminImage(file);
+      if (url) {
+        onChange(url);
+      } else {
+        alert("上传失败");
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex space-x-2">
+        <input
+          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/*"
+          onChange={handleFileChange}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="px-3 py-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 text-sm whitespace-nowrap"
+        >
+          {uploading ? "上传中..." : "上传图片"}
+        </button>
+      </div>
+      {value && (
+        <div className="relative w-full h-32 bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+          <img
+            src={value}
+            alt="Preview"
+            className="w-full h-full object-contain"
+          />
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface Props {
   currentUser: ApiAdminUser;
@@ -886,11 +955,10 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
               <label className="block text-xs font-medium text-slate-600">
                 封面图链接
               </label>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              <ImageUploadInput
                 value={exhibitionForm.imageUrl}
-                onChange={(e) =>
-                  handleExhibitionFormChange('imageUrl', e.target.value)
+                onChange={(val) =>
+                  handleExhibitionFormChange("imageUrl", val)
                 }
                 placeholder="图片 URL"
               />
@@ -1158,11 +1226,10 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
               <label className="block text-xs font-medium text-slate-600">
                 封面图链接
               </label>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              <ImageUploadInput
                 value={solutionForm.imageUrl}
-                onChange={(e) =>
-                  setSolutionForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                onChange={(val) =>
+                  setSolutionForm((prev) => ({ ...prev, imageUrl: val }))
                 }
                 placeholder="https://"
               />
@@ -1447,11 +1514,10 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
               <label className="block text-xs font-medium text-slate-600">
                 图片链接
               </label>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              <ImageUploadInput
                 value={productForm.imageUrl}
-                onChange={(e) =>
-                  setProductForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                onChange={(val) =>
+                  setProductForm((prev) => ({ ...prev, imageUrl: val }))
                 }
                 placeholder="https://"
               />

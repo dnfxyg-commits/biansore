@@ -7,9 +7,16 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { supabase } from "./supabaseClient.mjs";
 import crypto from "crypto";
+import multer from "multer";
+import fs from "fs";
 
 const app = express();
 const port = process.env.PORT || 4000;
+
+// Use memory storage for Supabase uploads
+const storage = multer.memoryStorage();
+
+const upload = multer({ storage: storage });
 
 const adminJwtSecret =
   process.env.ADMIN_JWT_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -407,6 +414,45 @@ app.post("/api/booth-applications", async (req, res) => {
 });
 
 app.use("/api/admin", requireAdmin);
+
+app.post("/api/admin/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+
+  try {
+    const file = req.file;
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    // Ensure bucket exists (best effort)
+    // We assume the bucket "uploads" exists or is public.
+    // Ideally, this should be created in Supabase dashboard.
+    
+    const { data, error } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false
+      });
+
+    if (error) {
+      console.error("Supabase storage upload error:", error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath);
+
+    res.json({ url: publicUrl });
+  } catch (error) {
+    console.error("Upload failed:", error);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
 
 app.post("/api/partnership-applications", async (req, res) => {
   const { name, company, phone, city, email, message } = req.body || {};
