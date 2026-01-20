@@ -59,13 +59,13 @@ const Navbar: React.FC<Props> = ({ onNavigate, currentView }) => {
             </button>
             <button
               onClick={() => onNavigate('admin')}
-              className={`hidden md:inline-flex px-3 py-1.5 rounded-full text-[11px] font-bold border ${
+              className={`inline-flex px-3 py-1.5 rounded-full text-[11px] font-bold border ${
                 currentView === 'admin'
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
               }`}
             >
-              Admin
+              管理后台
             </button>
             <button className="md:hidden p-2 text-slate-500">
               <Menu className="w-5 h-5" />

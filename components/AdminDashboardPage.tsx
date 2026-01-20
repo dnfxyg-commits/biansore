@@ -124,6 +124,12 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
   }, [currentUser.role]);
 
   useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0]);
+    }
+  }, [availableTabs, activeTab]);
+
+  useEffect(() => {
     if (
       currentUser.role === 'admin' ||
       currentUser.role === 'content' ||
@@ -1241,14 +1247,7 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
     return (
       <div className="space-y-8">
         <div>
-          <h2 className="text-base font-bold text-slate-900 mb-4">
-                  播客文章列表 (Total: {blogPosts.length}, Filtered: {podcastPosts.length})
-                  {blogPosts.length > 0 && (
-                    <span className="ml-2 text-xs font-normal text-gray-500">
-                      Sample Tags: {JSON.stringify(blogPosts[0].tags)}
-                    </span>
-                  )}
-                </h2>
+          <h2 className="text-base font-bold text-slate-900 mb-4">播客文章列表</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
