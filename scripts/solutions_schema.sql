@@ -14,23 +14,27 @@ CREATE TABLE IF NOT EXISTS solutions (
 ALTER TABLE solutions ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (public read, admin write)
+-- Policy for public read access
 CREATE POLICY "Public solutions are viewable by everyone" 
 ON solutions FOR SELECT 
 USING (true);
 
+-- Policy for authenticated insert (admin/service role)
 CREATE POLICY "Admins can insert solutions" 
 ON solutions FOR INSERT 
-WITH CHECK (true); -- Ideally restrict to admin role but for now simplistic
+WITH CHECK (true);
 
+-- Policy for authenticated update
 CREATE POLICY "Admins can update solutions" 
 ON solutions FOR UPDATE 
 USING (true);
 
+-- Policy for authenticated delete
 CREATE POLICY "Admins can delete solutions" 
 ON solutions FOR DELETE 
 USING (true);
 
--- Insert initial data
+-- Insert initial data with icons matching the frontend ICON_MAP
 INSERT INTO solutions (id, title, description, icon, image_url, features) VALUES
 (
   'e1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6',
@@ -44,7 +48,7 @@ INSERT INTO solutions (id, title, description, icon, image_url, features) VALUES
   'f2b3c4d5-e6f7-a8b9-c0d1-e2f3a4b5c6d7',
   '应急救援',
   '利用无人机的高机动性，在自然灾害、火灾等紧急情况下进行快速侦查、物资投送与辅助救援。',
-  'Ambulance',
+  'ShieldAlert',
   'https://images.unsplash.com/photo-1508614589041-895b8cba7e32?auto=format&fit=crop&q=80&w=800',
   ARRAY['灾情侦查', '空中喊话', '救援物资空投', '生命探测']
 ),
@@ -52,7 +56,7 @@ INSERT INTO solutions (id, title, description, icon, image_url, features) VALUES
   'a3b4c5d6-e7f8-b9c0-d1e2-f3a4b5c6d7e8',
   '空中游览',
   '结合eVTOL与直升机技术，开发城市观光、景区游览等低空文旅项目，打造全新的视角体验。',
-  'Plane',
+  'Camera',
   'https://images.unsplash.com/photo-1540962351504-03099e0a754b?auto=format&fit=crop&q=80&w=800',
   ARRAY['城市观光', '景区航拍', '低空跳伞', '飞行体验']
 ),
@@ -60,7 +64,7 @@ INSERT INTO solutions (id, title, description, icon, image_url, features) VALUES
   'b4c5d6e7-f8a9-c0d1-e2f3-a4b5c6d7e8f9',
   '农林植保',
   '应用植保无人机进行精准施药、播种与农情监测，提高农业生产效率，减少农药浪费。',
-  'Sprout',
+  'Leaf',
   'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&q=80&w=800',
   ARRAY['精准施药', '种子播撒', '农情监测', '果树授粉']
 ),
@@ -68,8 +72,13 @@ INSERT INTO solutions (id, title, description, icon, image_url, features) VALUES
   'c5d6e7f8-a9b0-d1e2-f3a4-b5c6d7e8f9a0',
   '智慧巡检',
   '替代人工对电力线路、石油管道、桥梁风机等基础设施进行高频次、高精度的自动化巡检。',
-  'Radio',
+  'Zap',
   'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&q=80&w=800',
   ARRAY['电力巡检', '管道监测', '河道治理', '交通执法']
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  icon = EXCLUDED.icon,
+  image_url = EXCLUDED.image_url,
+  features = EXCLUDED.features;
