@@ -8,7 +8,7 @@ interface Props {
       | 'landing'
       | 'calendar'
       | 'insights'
-      | 'center'
+      | 'solutions'
       | 'partnership'
       | 'products'
       | 'admin'
@@ -22,7 +22,7 @@ const Navbar: React.FC<Props> = ({ onNavigate, currentView }) => {
     { id: 'domestic', label: '国内展会' },
     { id: 'insights', label: '低空播客' },
     { id: 'products', label: '产品展示' },
-    { id: 'center', label: '场馆信息' },
+    { id: 'solutions', label: '低空场景解决方案' },
     { id: 'partnership', label: '战略合作' },
   ];
 

@@ -18,12 +18,17 @@ import {
   createAdminBlogPost,
   updateAdminBlogPost,
   deleteAdminBlogPost,
+  fetchAdminSolutions,
+  createAdminSolution,
+  updateAdminSolution,
+  deleteAdminSolution,
   type AdminBoothApplication,
   type AdminPartnershipApplication,
   type AdminTicketBooking,
   type AdminExhibitionPayload,
   type AdminListUser,
   type AdminBlogPost,
+  type AdminSolution,
   type AdminUser as ApiAdminUser
 } from '../services/api';
 
@@ -37,6 +42,7 @@ type Tab =
   | 'booth'
   | 'partnership'
   | 'exhibitions'
+  | 'solutions'
   | 'podcasts'
   | 'users';
 
@@ -107,15 +113,34 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
   const [savingPost, setSavingPost] = useState(false);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
+  const [solutions, setSolutions] = useState<AdminSolution[]>([]);
+  const [solutionForm, setSolutionForm] = useState<{
+    id?: string;
+    title: string;
+    description: string;
+    icon: string;
+    imageUrl: string;
+    features: string;
+  }>({
+    id: undefined,
+    title: '',
+    description: '',
+    icon: '',
+    imageUrl: '',
+    features: ''
+  });
+  const [savingSolution, setSavingSolution] = useState(false);
+  const [deletingSolutionId, setDeletingSolutionId] = useState<string | null>(null);
+
   const availableTabs: Tab[] = useMemo(() => {
     if (currentUser.role === 'admin') {
-      return ['tickets', 'booth', 'partnership', 'exhibitions', 'podcasts', 'users'];
+      return ['tickets', 'booth', 'partnership', 'exhibitions', 'solutions', 'podcasts', 'users'];
     }
     if (currentUser.role === 'ops') {
       return ['tickets', 'booth', 'partnership'];
     }
     if (currentUser.role === 'content') {
-      return ['exhibitions', 'podcasts'];
+      return ['exhibitions', 'solutions', 'podcasts'];
     }
     if (currentUser.role === 'podcast') {
       return ['podcasts'];
@@ -151,18 +176,20 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
           fetchAdminTicketBookings(),
           fetchAdminBoothApplications(),
           fetchAdminPartnershipApplications(),
-          fetchExhibitions()
+          fetchExhibitions(),
+          fetchAdminSolutions()
         ];
 
         if (currentUser.role === 'admin') {
           promises.push(fetchAdminUsers());
         }
 
-        const [t, b, p, e, users] = (await Promise.all(promises)) as [
+        const [t, b, p, e, s, users] = (await Promise.all(promises)) as [
           AdminTicketBooking[],
           AdminBoothApplication[],
           AdminPartnershipApplication[],
           Exhibition[],
+          AdminSolution[],
           AdminListUser[] | undefined
         ];
 
@@ -170,6 +197,7 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
         setBoothApps(b);
         setPartnerApps(p);
         setExhibitions(e);
+        setSolutions(s);
         if (users) {
           setAdminUsers(users);
         }
@@ -922,6 +950,250 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
     );
   };
 
+  const handleDeleteSolution = async (id: string) => {
+    if (!window.confirm('确认删除这个解决方案吗？')) {
+      return;
+    }
+    setDeletingSolutionId(id);
+    const ok = await deleteAdminSolution(id);
+    setDeletingSolutionId(null);
+    if (ok) {
+      setSolutions((prev) => prev.filter((s) => s.id !== id));
+    } else {
+      alert('删除失败，请稍后重试');
+    }
+  };
+
+  const handleEditSolution = (solution: AdminSolution) => {
+    setSolutionForm({
+      id: solution.id,
+      title: solution.title,
+      description: solution.description,
+      icon: solution.icon,
+      imageUrl: solution.imageUrl,
+      features: (solution.features || []).join('\n')
+    });
+    setActiveTab('solutions');
+  };
+
+  const handleNewSolution = () => {
+    setSolutionForm({
+      id: undefined,
+      title: '',
+      description: '',
+      icon: '',
+      imageUrl: '',
+      features: ''
+    });
+  };
+
+  const handleSubmitSolution = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!solutionForm.title || !solutionForm.description) {
+      alert('请填写标题和描述');
+      return;
+    }
+
+    const payload = {
+      id: solutionForm.id,
+      title: solutionForm.title,
+      description: solutionForm.description,
+      icon: solutionForm.icon,
+      imageUrl: solutionForm.imageUrl,
+      features: solutionForm.features
+        .split('\n')
+        .map((f) => f.trim())
+        .filter((f) => f !== '')
+    };
+
+    setSavingSolution(true);
+    try {
+      if (solutionForm.id) {
+        const ok = await updateAdminSolution(payload as AdminSolution);
+        if (!ok) {
+          alert('保存失败，请稍后重试');
+          return;
+        }
+        setSolutions((prev) =>
+          prev.map((s) => (s.id === solutionForm.id ? (payload as AdminSolution) : s))
+        );
+      } else {
+        const created = await createAdminSolution(payload);
+        if (!created) {
+          alert('保存失败，请稍后重试');
+          return;
+        }
+        setSolutions((prev) => [...prev, created]);
+        setSolutionForm((prev) => ({ ...prev, id: created.id }));
+      }
+      alert('保存成功');
+      // Reset form for new entry if creating
+      if (!solutionForm.id) {
+        handleNewSolution();
+      }
+    } finally {
+      setSavingSolution(false);
+    }
+  };
+
+  const renderSolutions = () => {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">解决方案列表</h2>
+          <button
+            type="button"
+            onClick={handleNewSolution}
+            className="text-xs px-3 py-1.5 rounded-full border border-blue-500 text-blue-600 hover:bg-blue-50"
+          >
+            新增方案
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="text-left py-2 px-3">标题</th>
+                <th className="text-left py-2 px-3">描述</th>
+                <th className="text-right py-2 px-3">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {solutions.length === 0 ? (
+                <tr>
+                  <td className="py-4 px-3 text-sm text-slate-500" colSpan={3}>
+                    暂无解决方案数据
+                  </td>
+                </tr>
+              ) : (
+                solutions.map((s) => (
+                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2 px-3 font-medium">{s.title}</td>
+                    <td className="py-2 px-3 max-w-md truncate">{s.description}</td>
+                    <td className="py-2 px-3 text-right space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditSolution(s)}
+                        className="text-xs px-2 py-1 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSolution(s.id)}
+                        disabled={deletingSolutionId === s.id}
+                        className="text-xs px-2 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t border-slate-100 pt-6">
+          <h2 className="text-base font-bold text-slate-900 mb-4">
+            {solutionForm.id ? '编辑解决方案' : '新增解决方案'}
+          </h2>
+          <form onSubmit={handleSubmitSolution} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                标题
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={solutionForm.title}
+                onChange={(e) =>
+                  setSolutionForm((prev) => ({ ...prev, title: e.target.value }))
+                }
+                placeholder="例如：城市空中交通"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                图标 (Lucide Icon Name or URL)
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={solutionForm.icon}
+                onChange={(e) =>
+                  setSolutionForm((prev) => ({ ...prev, icon: e.target.value }))
+                }
+                placeholder="例如：Building2"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                封面图链接
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={solutionForm.imageUrl}
+                onChange={(e) =>
+                  setSolutionForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                }
+                placeholder="https://"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                描述
+              </label>
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[80px]"
+                value={solutionForm.description}
+                onChange={(e) =>
+                  setSolutionForm((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="简要说明解决方案"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                功能特性 (每行一个)
+              </label>
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[120px]"
+                value={solutionForm.features}
+                onChange={(e) =>
+                  setSolutionForm((prev) => ({ ...prev, features: e.target.value }))
+                }
+                placeholder="输入功能特性，每行一个"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={handleNewSolution}
+                className="px-4 py-2 rounded-full border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                disabled={savingSolution}
+              >
+                重置
+              </button>
+              <button
+                type="submit"
+                disabled={savingSolution}
+                className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingSolution ? '保存中...' : '保存解决方案'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   const renderUsers = () => {
     if (currentUser.role !== 'admin') {
       return (
@@ -1530,6 +1802,18 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
               展会管理
             </button>
           )}
+          {availableTabs.includes('solutions') && (
+            <button
+              onClick={() => setActiveTab('solutions')}
+              className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                activeTab === 'solutions'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+              }`}
+            >
+              解决方案
+            </button>
+          )}
           {availableTabs.includes('podcasts') && (
             <button
               onClick={() => setActiveTab('podcasts')}
@@ -1561,7 +1845,8 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
           {activeTab === 'booth' && renderBoothApps()}
           {activeTab === 'partnership' && renderPartnerApps()}
           {activeTab === 'exhibitions' && renderExhibitions()}
-          {activeTab === 'podcasts' && renderPodcasts()}
+              {activeTab === 'solutions' && renderSolutions()}
+              {activeTab === 'podcasts' && renderPodcasts()}
           {activeTab === 'users' && renderUsers()}
         </div>
       </div>

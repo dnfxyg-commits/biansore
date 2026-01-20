@@ -1,8 +1,9 @@
-import type { Exhibition, NewsItem } from "../types";
-import type { ExhibitionCenter, Product } from "../data/mockData";
+import type { Exhibition, NewsItem, Solution } from "../types";
+import type { Product } from "../data/mockData";
 
 const API_BASE_URL: string =
-  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:4000";
+  (import.meta as any).env?.VITE_API_BASE_URL ??
+  ((import.meta as any).env?.PROD ? "" : "http://localhost:4000");
 
 type BoothApplicationPayload = {
   exhibitionId: string;
@@ -157,11 +158,11 @@ export const fetchExhibitions = async (): Promise<Exhibition[]> => {
   }
 };
 
-export const fetchExhibitionCenters = async (): Promise<ExhibitionCenter[]> => {
+export const fetchSolutions = async (): Promise<Solution[]> => {
   try {
-    return await getJson<ExhibitionCenter[]>("/api/exhibition-centers");
+    return await getJson<Solution[]>("/api/solutions");
   } catch (error) {
-    console.error("Failed to fetch exhibition centers", error);
+    console.error("Failed to fetch solutions", error);
     return [];
   }
 };
@@ -516,4 +517,70 @@ export const updateAdminExhibition = async (
     console.error("Request to /api/admin/exhibitions failed", error);
     return false;
   }
+};
+
+export type AdminSolution = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  imageUrl: string;
+  features: string[];
+};
+
+export const fetchAdminSolutions = async (): Promise<AdminSolution[]> => {
+  try {
+    return await getJson<AdminSolution[]>("/api/admin/solutions");
+  } catch (error) {
+    console.error("Failed to fetch admin solutions", error);
+    return [];
+  }
+};
+
+export const createAdminSolution = async (
+  payload: Omit<AdminSolution, "id">
+): Promise<AdminSolution | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/solutions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as AdminSolution;
+  } catch (error) {
+    console.error("Failed to create admin solution", error);
+    return null;
+  }
+};
+
+export const updateAdminSolution = async (
+  payload: AdminSolution
+): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/solutions`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify(payload)
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to update admin solution", error);
+    return false;
+  }
+};
+
+export const deleteAdminSolution = async (id: string): Promise<boolean> => {
+  return deleteJson("/api/admin/solutions", { id });
 };

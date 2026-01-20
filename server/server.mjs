@@ -1,4 +1,6 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
@@ -617,30 +619,142 @@ app.get("/api/exhibitions", async (req, res) => {
   res.json(mapped);
 });
 
-app.get("/api/exhibition-centers", async (req, res) => {
-  const { data, error } = await supabase.from("exhibition_centers").select("*");
+app.get("/api/solutions", async (req, res) => {
+  const { data, error } = await supabase
+    .from("solutions")
+    .select("*")
+    .order("created_at", { ascending: true });
 
   if (error) {
-    res.status(500).json({ error: "Failed to load exhibition centers" });
+    res.status(500).json({ error: "Failed to load solutions" });
     return;
   }
 
   const mapped = (data || []).map((row) => ({
     id: row.id,
-    name: row.name,
-    nameEn: row.name_en,
-    location: row.location,
-    address: row.address,
-    area: row.area,
+    title: row.title,
     description: row.description,
+    icon: row.icon,
     imageUrl: row.image_url,
-    facilities: row.facilities || [],
-    region: row.region,
-    country: row.country,
-    city: row.city
+    features: row.features || []
   }));
 
   res.json(mapped);
+});
+
+app.get("/api/admin/solutions", async (req, res) => {
+  const { data, error } = await supabase
+    .from("solutions")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching admin solutions:", error);
+    res.status(500).json({ error: "Failed to load solutions" });
+    return;
+  }
+
+  const mapped = (data || []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    imageUrl: row.image_url,
+    features: row.features || []
+  }));
+
+  res.json(mapped);
+});
+
+app.post("/api/admin/solutions", async (req, res) => {
+  const { title, description, icon, imageUrl, features } = req.body || {};
+
+  if (!title || !description || !icon) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  const featuresArray = Array.isArray(features)
+    ? features.filter((f) => typeof f === "string" && f.trim() !== "")
+    : [];
+
+  const { data, error } = await supabase
+    .from("solutions")
+    .insert({
+      title,
+      description,
+      icon,
+      image_url: imageUrl || null,
+      features: featuresArray
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    res.status(500).json({ error: "Failed to create solution" });
+    return;
+  }
+
+  res.status(201).json({
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    icon: data.icon,
+    imageUrl: data.image_url,
+    features: data.features || []
+  });
+});
+
+app.put("/api/admin/solutions", async (req, res) => {
+  const { id, title, description, icon, imageUrl, features } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const featuresArray = Array.isArray(features)
+    ? features.filter((f) => typeof f === "string" && f.trim() !== "")
+    : [];
+
+  const update = {
+    title,
+    description,
+    icon,
+    image_url: imageUrl || null,
+    features: featuresArray,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from("solutions")
+    .update(update)
+    .eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to update solution" });
+    return;
+  }
+
+  res.status(200).json({ success: true });
+});
+
+app.delete("/api/admin/solutions", async (req, res) => {
+  const { id } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const { error } = await supabase.from("solutions").delete().eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to delete solution" });
+    return;
+  }
+
+  res.status(204).end();
 });
 
 app.get("/api/products", async (req, res) => {
@@ -914,7 +1028,139 @@ app.put("/api/admin/exhibitions", async (req, res) => {
   res.status(200).json({ success: true });
 });
 
-import { fileURLToPath } from 'url';
+// Solutions Endpoints
+app.get("/api/solutions", async (req, res) => {
+  const { data, error } = await supabase.from("solutions").select("*");
+
+  if (error) {
+    res.status(500).json({ error: "Failed to load solutions" });
+    return;
+  }
+
+  const mapped = (data || []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    imageUrl: row.image_url,
+    features: row.features || []
+  }));
+
+  res.json(mapped);
+});
+
+app.get("/api/admin/solutions", async (req, res) => {
+  const { data, error } = await supabase.from("solutions").select("*");
+
+  if (error) {
+    res.status(500).json({ error: "Failed to load solutions" });
+    return;
+  }
+
+  const mapped = (data || []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    imageUrl: row.image_url,
+    features: row.features || []
+  }));
+
+  res.json(mapped);
+});
+
+app.post("/api/admin/solutions", async (req, res) => {
+  const { title, description, icon, imageUrl, features } = req.body || {};
+
+  if (!title || !description) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  const id = crypto.randomUUID();
+
+  const { error } = await supabase.from("solutions").insert({
+    id,
+    title,
+    description,
+    icon: icon || null,
+    image_url: imageUrl || null,
+    features: features || []
+  });
+
+  if (error) {
+    res.status(500).json({ error: "Failed to create solution" });
+    return;
+  }
+
+  res.status(201).json({
+    id,
+    title,
+    description,
+    icon: icon || null,
+    imageUrl: imageUrl || null,
+    features: features || []
+  });
+});
+
+app.put("/api/admin/solutions", async (req, res) => {
+  const { id, title, description, icon, imageUrl, features } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const update = {
+    title,
+    description,
+    icon: icon || null,
+    image_url: imageUrl || null,
+    features: features || []
+  };
+
+  const { error } = await supabase.from("solutions").update(update).eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to update solution" });
+    return;
+  }
+
+  res.status(200).json({ success: true });
+});
+
+app.delete("/api/admin/solutions", async (req, res) => {
+  const { id } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const { error } = await supabase.from("solutions").delete().eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to delete solution" });
+    return;
+  }
+
+  res.status(204).end();
+});
+
+// Serve static files in production
+if (process.env.NODE_ENV === "production") {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distPath = path.join(__dirname, "../dist");
+  
+  app.use(express.static(distPath));
+  
+  app.get("*", (req, res) => {
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ error: "Not Found" });
+    }
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   app.listen(port, () => {

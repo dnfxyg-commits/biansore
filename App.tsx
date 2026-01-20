@@ -10,19 +10,18 @@ import AboutPage from './components/AboutPage';
 import ExhibitionDetailPage from './components/ExhibitionDetailPage';
 import BoothApplicationPage from './components/BoothApplicationPage';
 import TicketBookingPage from './components/TicketBookingPage';
-import ExhibitionCenterSection from './components/ExhibitionCenterSection';
-import VenueDetailPage from './components/VenueDetailPage';
+import SolutionsPage from './components/SolutionsPage';
 import ProductShowcasePage from './components/ProductShowcasePage';
 import ProductDetailPage from './components/ProductDetailPage';
 import PartnershipPage from './components/PartnershipPage';
 import AdminDashboardPage from './components/AdminDashboardPage';
 import AdminLoginPage from './components/AdminLoginPage';
 import ExhibitionCarousel from './components/ExhibitionCarousel';
-import { EXHIBITIONS as MOCK_EXHIBITIONS, EXHIBITION_CENTERS as MOCK_EXHIBITION_CENTERS, PRODUCTS as MOCK_PRODUCTS, BLOG_POSTS as MOCK_BLOG_POSTS } from './data/mockData';
-import type { ExhibitionCenter, Product } from './data/mockData';
+import { EXHIBITIONS as MOCK_EXHIBITIONS, PRODUCTS as MOCK_PRODUCTS, BLOG_POSTS as MOCK_BLOG_POSTS } from './data/mockData';
+import type { Product } from './data/mockData';
 import type { Exhibition, NewsItem } from './types';
 import { ChevronRight, Package, Zap, ArrowUpRight } from 'lucide-react';
-import { fetchBlogPosts, fetchExhibitionCenters, fetchExhibitions, fetchProducts, type AdminUser, adminLogout, fetchAdminMe } from './services/api';
+import { fetchBlogPosts, fetchExhibitions, fetchProducts, type AdminUser, adminLogout, fetchAdminMe } from './services/api';
 
 type View =
   | 'landing'
@@ -35,8 +34,7 @@ type View =
   | 'ticket_booking'
   | 'domestic'
   | 'international'
-  | 'center'
-  | 'venue_detail'
+  | 'solutions'
   | 'products'
   | 'product_detail'
   | 'partnership'
@@ -45,36 +43,30 @@ type View =
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedExId, setSelectedExId] = useState<string | null>(null);
-  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<NewsItem | null>(null);
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [exhibitions, setExhibitions] = useState<Exhibition[]>(MOCK_EXHIBITIONS);
-  const [exhibitionCenters, setExhibitionCenters] = useState<ExhibitionCenter[]>(MOCK_EXHIBITION_CENTERS);
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [blogPosts, setBlogPosts] = useState<NewsItem[]>(MOCK_BLOG_POSTS);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView, selectedExId, selectedVenueId, selectedProductId]);
+  }, [currentView, selectedExId, selectedProductId]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [remoteExhibitions, remoteCenters, remoteProducts, remoteBlogPosts] =
+        const [remoteExhibitions, remoteProducts, remoteBlogPosts] =
           await Promise.all([
             fetchExhibitions(),
-            fetchExhibitionCenters(),
             fetchProducts(),
             fetchBlogPosts()
           ]);
 
         if (remoteExhibitions && remoteExhibitions.length > 0) {
           setExhibitions(remoteExhibitions);
-        }
-        if (remoteCenters && remoteCenters.length > 0) {
-          setExhibitionCenters(remoteCenters);
         }
         if (remoteProducts && remoteProducts.length > 0) {
           setProducts(remoteProducts);
@@ -113,11 +105,6 @@ const App: React.FC = () => {
     setCurrentView('exhibition_detail');
   };
 
-  const handleViewVenueDetails = (id: string) => {
-    setSelectedVenueId(id);
-    setCurrentView('venue_detail');
-  };
-
   const handleViewProductDetails = (id: string) => {
     setSelectedProductId(id);
     setCurrentView('product_detail');
@@ -144,10 +131,6 @@ const App: React.FC = () => {
     return exhibitions.find(ex => ex.id === selectedExId);
   }, [selectedExId, exhibitions]);
 
-  const selectedVenue = useMemo(() => {
-    return exhibitionCenters.find(v => v.id === selectedVenueId);
-  }, [selectedVenueId, exhibitionCenters]);
-
   const selectedProduct = useMemo(() => {
     return products.find(p => p.id === selectedProductId);
   }, [selectedProductId, products]);
@@ -163,13 +146,8 @@ const App: React.FC = () => {
             onBookTickets={() => setCurrentView('ticket_booking')}
           />
         ) : null;
-      case 'venue_detail':
-        return selectedVenue ? (
-          <VenueDetailPage 
-            venue={selectedVenue}
-            onBack={() => setCurrentView('center')}
-          />
-        ) : null;
+      case 'solutions':
+        return <SolutionsPage />;
       case 'product_detail':
         return selectedProduct ? (
           <ProductDetailPage 
@@ -214,13 +192,6 @@ const App: React.FC = () => {
             onViewDetails={handleViewExDetails}
             initialRegion="Overseas"
             title="国际展会"
-          />
-        );
-      case 'center':
-        return (
-          <ExhibitionCenterSection
-            centers={exhibitionCenters}
-            onViewVenue={handleViewVenueDetails}
           />
         );
       case 'calendar':
