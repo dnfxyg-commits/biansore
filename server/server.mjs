@@ -619,6 +619,237 @@ app.get("/api/exhibitions", async (req, res) => {
   res.json(mapped);
 });
 
+app.get("/api/admin/exhibitions", async (req, res) => {
+  const { data, error } = await supabase
+    .from("exhibitions")
+    .select("*")
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching admin exhibitions:", error);
+    res.status(500).json({ error: "Failed to load exhibitions" });
+    return;
+  }
+
+  const mapped = (data || []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    location: row.location,
+    date: row.date,
+    description: row.description,
+    imageUrl: row.image_url,
+    category: row.category,
+    featured: row.featured,
+    coordinates: { lat: row.lat, lng: row.lng },
+    region: row.region,
+    websiteUrl: row.website_url
+  }));
+
+  res.json(mapped);
+});
+
+app.post("/api/admin/exhibitions", async (req, res) => {
+  const { title, location, date, description, imageUrl, category, featured, region, websiteUrl, lat, lng } = req.body || {};
+
+  if (!title || !location || !date) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("exhibitions")
+    .insert({
+      title,
+      location,
+      date,
+      description,
+      image_url: imageUrl || null,
+      category,
+      featured,
+      region,
+      website_url: websiteUrl || null,
+      lat,
+      lng
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    res.status(500).json({ error: "Failed to create exhibition" });
+    return;
+  }
+
+  res.status(201).json(data);
+});
+
+app.put("/api/admin/exhibitions", async (req, res) => {
+  const { id, title, location, date, description, imageUrl, category, featured, region, websiteUrl, lat, lng } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const update = {
+    title,
+    location,
+    date,
+    description,
+    image_url: imageUrl || null,
+    category,
+    featured,
+    region,
+    website_url: websiteUrl || null,
+    lat,
+    lng,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from("exhibitions")
+    .update(update)
+    .eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to update exhibition" });
+    return;
+  }
+
+  res.status(200).json({ success: true });
+});
+
+app.delete("/api/admin/exhibitions", async (req, res) => {
+  const { id } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const { error } = await supabase.from("exhibitions").delete().eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to delete exhibition" });
+    return;
+  }
+
+  res.status(204).end();
+});
+
+app.get("/api/admin/products", async (req, res) => {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching admin products:", error);
+    res.status(500).json({ error: "Failed to load products" });
+    return;
+  }
+
+  const mapped = (data || []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    category: row.category,
+    imageUrl: row.image_url,
+    description: row.description,
+    status: row.status,
+    specs: row.specs || []
+  }));
+
+  res.json(mapped);
+});
+
+app.post("/api/admin/products", async (req, res) => {
+  const { name, brand, category, imageUrl, description, status, specs } = req.body || {};
+
+  if (!name || !brand || !category) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  const specsArray = Array.isArray(specs)
+    ? specs.filter((s) => typeof s === "string" && s.trim() !== "")
+    : [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      name,
+      brand,
+      category,
+      image_url: imageUrl || null,
+      description,
+      status: status || 'available',
+      specs: specsArray
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    res.status(500).json({ error: "Failed to create product" });
+    return;
+  }
+
+  res.status(201).json(data);
+});
+
+app.put("/api/admin/products", async (req, res) => {
+  const { id, name, brand, category, imageUrl, description, status, specs } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const specsArray = Array.isArray(specs)
+    ? specs.filter((s) => typeof s === "string" && s.trim() !== "")
+    : [];
+
+  const update = {
+    name,
+    brand,
+    category,
+    image_url: imageUrl || null,
+    description,
+    status,
+    specs: specsArray,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from("products")
+    .update(update)
+    .eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to update product" });
+    return;
+  }
+
+  res.status(200).json({ success: true });
+});
+
+app.delete("/api/admin/products", async (req, res) => {
+  const { id } = req.body || {};
+
+  if (!id) {
+    res.status(400).json({ error: "Missing id" });
+    return;
+  }
+
+  const { error } = await supabase.from("products").delete().eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: "Failed to delete product" });
+    return;
+  }
+
+  res.status(204).end();
+});
+
 app.get("/api/solutions", async (req, res) => {
   const { data, error } = await supabase
     .from("solutions")

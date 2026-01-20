@@ -421,6 +421,30 @@ export type AdminExhibitionPayload = {
   lng?: number | null;
 };
 
+export type AdminProduct = {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  status: string;
+  specs: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminProductPayload = {
+  id?: string;
+  name: string;
+  brand: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  status: string;
+  specs: string[];
+};
+
 export const createAdminBlogPost = async (
   payload: AdminBlogPostPayload
 ): Promise<AdminBlogPost | null> => {
@@ -490,7 +514,7 @@ export const deleteAdminTicketBooking = async (
 export const createAdminExhibition = async (
   payload: AdminExhibitionPayload
 ): Promise<boolean> => {
-  return postJson("/api/admin/exhibitions", payload);
+  return postJson("/api/admin/exhibitions", payload, { credentials: "include" });
 };
 
 export const updateAdminExhibition = async (
@@ -502,6 +526,7 @@ export const updateAdminExhibition = async (
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
 
@@ -517,6 +542,58 @@ export const updateAdminExhibition = async (
     console.error("Request to /api/admin/exhibitions failed", error);
     return false;
   }
+};
+
+export const deleteAdminExhibition = async (id: string): Promise<boolean> => {
+  return deleteJson("/api/admin/exhibitions", { id });
+};
+
+export const fetchAdminProducts = async (): Promise<AdminProduct[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/products`, {
+      method: "GET",
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return (await response.json()) as AdminProduct[];
+  } catch (error) {
+    console.error("Failed to fetch admin products", error);
+    return [];
+  }
+};
+
+export const createAdminProduct = async (
+  payload: AdminProductPayload
+): Promise<boolean> => {
+  return postJson("/api/admin/products", payload, { credentials: "include" });
+};
+
+export const updateAdminProduct = async (
+  payload: AdminProductPayload
+): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/products`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify(payload)
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to update admin product", error);
+    return false;
+  }
+};
+
+export const deleteAdminProduct = async (id: string): Promise<boolean> => {
+  return deleteJson("/api/admin/products", { id });
 };
 
 export type AdminSolution = {

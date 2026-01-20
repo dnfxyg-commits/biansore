@@ -22,6 +22,10 @@ import {
   createAdminSolution,
   updateAdminSolution,
   deleteAdminSolution,
+  fetchAdminProducts,
+  createAdminProduct,
+  updateAdminProduct,
+  deleteAdminProduct,
   type AdminBoothApplication,
   type AdminPartnershipApplication,
   type AdminTicketBooking,
@@ -29,6 +33,8 @@ import {
   type AdminListUser,
   type AdminBlogPost,
   type AdminSolution,
+  type AdminProduct,
+  type AdminProductPayload,
   type AdminUser as ApiAdminUser
 } from '../services/api';
 
@@ -43,6 +49,7 @@ type Tab =
   | 'partnership'
   | 'exhibitions'
   | 'solutions'
+  | 'products'
   | 'podcasts'
   | 'users';
 
@@ -132,15 +139,30 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
   const [savingSolution, setSavingSolution] = useState(false);
   const [deletingSolutionId, setDeletingSolutionId] = useState<string | null>(null);
 
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [productForm, setProductForm] = useState<AdminProductPayload>({
+    id: undefined,
+    name: '',
+    brand: '',
+    category: '',
+    imageUrl: '',
+    description: '',
+    status: 'available',
+    specs: []
+  });
+  const [productSpecsInput, setProductSpecsInput] = useState('');
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+
   const availableTabs: Tab[] = useMemo(() => {
     if (currentUser.role === 'admin') {
-      return ['tickets', 'booth', 'partnership', 'exhibitions', 'solutions', 'podcasts', 'users'];
+      return ['tickets', 'booth', 'partnership', 'exhibitions', 'solutions', 'products', 'podcasts', 'users'];
     }
     if (currentUser.role === 'ops') {
       return ['tickets', 'booth', 'partnership'];
     }
     if (currentUser.role === 'content') {
-      return ['exhibitions', 'solutions', 'podcasts'];
+      return ['exhibitions', 'solutions', 'products', 'podcasts'];
     }
     if (currentUser.role === 'podcast') {
       return ['podcasts'];
@@ -177,19 +199,21 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
           fetchAdminBoothApplications(),
           fetchAdminPartnershipApplications(),
           fetchExhibitions(),
-          fetchAdminSolutions()
+          fetchAdminSolutions(),
+          fetchAdminProducts()
         ];
 
         if (currentUser.role === 'admin') {
           promises.push(fetchAdminUsers());
         }
 
-        const [t, b, p, e, s, users] = (await Promise.all(promises)) as [
+        const [t, b, p, e, s, prod, users] = (await Promise.all(promises)) as [
           AdminTicketBooking[],
           AdminBoothApplication[],
           AdminPartnershipApplication[],
           Exhibition[],
           AdminSolution[],
+          AdminProduct[],
           AdminListUser[] | undefined
         ];
 
@@ -198,6 +222,7 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
         setPartnerApps(p);
         setExhibitions(e);
         setSolutions(s);
+        setProducts(prod);
         if (users) {
           setAdminUsers(users);
         }
@@ -1194,6 +1219,295 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
     );
   };
 
+  const handleNewProduct = () => {
+    setProductForm({
+      id: undefined,
+      name: '',
+      brand: '',
+      category: '',
+      imageUrl: '',
+      description: '',
+      status: 'available',
+      specs: []
+    });
+    setProductSpecsInput('');
+  };
+
+  const handleEditProduct = (product: AdminProduct) => {
+    setProductForm({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      category: product.category,
+      imageUrl: product.imageUrl,
+      description: product.description,
+      status: product.status,
+      specs: product.specs || []
+    });
+    setProductSpecsInput((product.specs || []).join('\n'));
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm('确认删除这个产品？')) {
+      return;
+    }
+    setDeletingProductId(id);
+    const ok = await deleteAdminProduct(id);
+    setDeletingProductId(null);
+    if (ok) {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } else {
+      alert('删除失败，请稍后重试');
+    }
+  };
+
+  const handleSubmitProduct = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!productForm.name || !productForm.brand || !productForm.category) {
+      alert('请填写名称、品牌和分类');
+      return;
+    }
+
+    const payload: AdminProductPayload = {
+      ...productForm,
+      specs: productSpecsInput
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s !== '')
+    };
+
+    setSavingProduct(true);
+    try {
+      if (productForm.id) {
+        const ok = await updateAdminProduct(payload);
+        if (!ok) {
+          alert('保存失败，请稍后重试');
+          return;
+        }
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === productForm.id
+              ? { ...payload, id: productForm.id!, createdAt: p.createdAt, updatedAt: new Date().toISOString() }
+              : p
+          )
+        );
+      } else {
+        const created = await createAdminProduct(payload);
+        if (!created) {
+          alert('保存失败，请稍后重试');
+          return;
+        }
+        setProducts((prev) => [...prev, created]);
+        setProductForm((prev) => ({ ...prev, id: created.id }));
+      }
+      alert('保存成功');
+      if (!productForm.id) {
+        handleNewProduct();
+      }
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  const renderProducts = () => {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">产品列表</h2>
+          <button
+            type="button"
+            onClick={handleNewProduct}
+            className="text-xs px-3 py-1.5 rounded-full border border-blue-500 text-blue-600 hover:bg-blue-50"
+          >
+            新增产品
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="text-left py-2 px-3">名称</th>
+                <th className="text-left py-2 px-3">品牌</th>
+                <th className="text-left py-2 px-3">分类</th>
+                <th className="text-left py-2 px-3">状态</th>
+                <th className="text-right py-2 px-3">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.length === 0 ? (
+                <tr>
+                  <td className="py-4 px-3 text-sm text-slate-500" colSpan={5}>
+                    暂无产品数据
+                  </td>
+                </tr>
+              ) : (
+                products.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2 px-3 font-medium">{p.name}</td>
+                    <td className="py-2 px-3">{p.brand}</td>
+                    <td className="py-2 px-3">{p.category}</td>
+                    <td className="py-2 px-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${
+                        p.status === 'available'
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-slate-50 text-slate-500 border-slate-200'
+                      }`}>
+                        {p.status === 'available' ? '上架' : '下架'}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-right space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditProduct(p)}
+                        className="text-xs px-2 py-1 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProduct(p.id)}
+                        disabled={deletingProductId === p.id}
+                        className="text-xs px-2 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t border-slate-100 pt-6">
+          <h2 className="text-base font-bold text-slate-900 mb-4">
+            {productForm.id ? '编辑产品' : '新增产品'}
+          </h2>
+          <form onSubmit={handleSubmitProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                名称
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={productForm.name}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                placeholder="例如：DJI Mavic 3"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                品牌
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={productForm.brand}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, brand: e.target.value }))
+                }
+                placeholder="例如：DJI"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                分类
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={productForm.category}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, category: e.target.value }))
+                }
+                placeholder="例如：无人机"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">
+                状态
+              </label>
+              <select
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={productForm.status}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, status: e.target.value as 'available' | 'discontinued' }))
+                }
+              >
+                <option value="available">上架</option>
+                <option value="discontinued">下架</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                图片链接
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={productForm.imageUrl}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                }
+                placeholder="https://"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                描述
+              </label>
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[80px]"
+                value={productForm.description}
+                onChange={(e) =>
+                  setProductForm((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="产品描述"
+              />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                规格参数 (每行一个)
+              </label>
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[120px]"
+                value={productSpecsInput}
+                onChange={(e) =>
+                  setProductSpecsInput(e.target.value)
+                }
+                placeholder="输入规格参数，每行一个"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={handleNewProduct}
+                className="px-4 py-2 rounded-full border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                disabled={savingProduct}
+              >
+                重置
+              </button>
+              <button
+                type="submit"
+                disabled={savingProduct}
+                className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingProduct ? '保存中...' : '保存产品'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   const renderUsers = () => {
     if (currentUser.role !== 'admin') {
       return (
@@ -1811,7 +2125,19 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
                   : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
               }`}
             >
-              解决方案
+              低空场景解决方案
+            </button>
+          )}
+          {availableTabs.includes('products') && (
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                activeTab === 'products'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+              }`}
+            >
+              产品管理
             </button>
           )}
           {availableTabs.includes('podcasts') && (
@@ -1845,8 +2171,9 @@ const AdminDashboardPage: React.FC<Props> = ({ currentUser, onLogout }) => {
           {activeTab === 'booth' && renderBoothApps()}
           {activeTab === 'partnership' && renderPartnerApps()}
           {activeTab === 'exhibitions' && renderExhibitions()}
-              {activeTab === 'solutions' && renderSolutions()}
-              {activeTab === 'podcasts' && renderPodcasts()}
+          {activeTab === 'solutions' && renderSolutions()}
+          {activeTab === 'products' && renderProducts()}
+          {activeTab === 'podcasts' && renderPodcasts()}
           {activeTab === 'users' && renderUsers()}
         </div>
       </div>
